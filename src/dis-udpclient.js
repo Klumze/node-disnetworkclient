@@ -19,9 +19,9 @@ var host = argv.host || DEFAULT_HOST;
 var port = argv.port || DEFAULT_PORT;
 // Test file generation info
 var time = argv.time || DEFAULT_TIME;
-var fileName = argv.tName || undefined;
-var khz = argv.khz || DEFAULT_KHZ;
-var depth = argv.depth || DEFAULT_DEPTH;
+var fileName = argv.tFile || undefined;
+var khz = argv.tKhz || DEFAULT_KHZ;
+var depth = argv.tDepth || DEFAULT_DEPTH;
 
 if(fileName) {
     createTestFile(fileName, time, depth, khz);
