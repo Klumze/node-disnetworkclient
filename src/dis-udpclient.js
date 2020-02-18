@@ -18,29 +18,34 @@ const DEFAULT_DEPTH = 16;
 var host = argv.host || DEFAULT_HOST;
 var port = argv.port || DEFAULT_PORT;
 // Test file generation info
-var time = argv.time || DEFAULT_TIME;
-var fileName = argv.tFile || undefined;
-var khz = argv.tKhz || DEFAULT_KHZ;
-var depth = argv.tDepth || DEFAULT_DEPTH;
+var tTime = argv.time || DEFAULT_TIME;
+var tFile = argv.tFile || undefined;
+var tKhz = argv.tKhz || DEFAULT_KHZ;
+var tDepth = argv.tDepth || DEFAULT_DEPTH;
+var sFile = argv.sFile || undefined;
 
-if(fileName) {
-    createTestFile(fileName, time, depth, khz);
+if (tFile) {
+    createTestFile(tFile, tTime, tDepth, tKhz);
 }
-
-// Get the test audio file and convert to Binary Array
-var filepath = path.join(__dirname, 'suspended.wav');
-try {
-    // Sound file buffer
-    var sfBuffer = fs.readFileSync(filepath);
-    // Convert buffer to wave file
-    var wav = new WaveFile(sfBuffer);
-    var samples = wav.getSamples(false, Uint16Array);
-    var pduStream = prepSigPDUs(samples);
-    var pduSample = [pduStream[0], pduStream[pduStream.length-1]];
-    console.log(pduSample);
-    sendPDUs(pduStream);
-} catch (e) {
-    console.log(e);
+if (sFile) {
+    // Get the test audio file and convert to Binary Array
+    var filepath = path.join(__dirname, sFile);
+    try {
+        // Sound file buffer
+        var sfBuffer = fs.readFileSync(filepath);
+        // Convert buffer to wave file
+        var wav = new WaveFile(sfBuffer);
+        var samples64 = wav.getSamples(false, Float64Array);
+        var samples = wav.getSamples(false, Uint16Array);
+        var pduStream = prepSigPDUs(samples);
+        var pduSample = [pduStream[0], pduStream[pduStream.length - 1]];
+        console.log(pduSample);
+        sendPDUs(pduStream);
+        console.log("16 bit samples length:", samples.length);
+        console.log("64 bit samples length:", samples64.length);
+    } catch (e) {
+        console.log(e);
+    }
 }
 
 // This function takes in an array of audio samples and prepares them to be sent as DIS Signal Packets
@@ -49,7 +54,7 @@ function prepSigPDUs(samples) {
     var pduData = [];
     var sPdu = new dis.SignalPdu();
 
-    console.log(samples.slice(0,1));
+    console.log(samples.slice(0, 1));
 
     samples.forEach((sample, key) => {
         // Something is wrong with how I'm setting up my data, need to figure this one out
@@ -60,7 +65,7 @@ function prepSigPDUs(samples) {
         // Use the 2 bytes to store the UInt16
         buf.writeUInt16BE(sample); // write uint16
         console.log("Written buf:", buf);
-        var bytes = new Uint8Array(buf, 0, 2); 
+        var bytes = new Uint8Array(buf, 0, 2);
         console.log("Split buf:", bytes);
         bytes.forEach((byte, idx) => {
             console.log("Before the byte goes in:", byte);
@@ -69,7 +74,7 @@ function prepSigPDUs(samples) {
             sPdu.data.push(chunk);
         });
         cntr++;
-        if(cntr >= 320 || key === samples.length - 1) {
+        if (cntr >= 320 || key === samples.length - 1) {
             var timestamp = new Date().getTime();
             sPdu.entityId.site = 1;
             sPdu.entityId.application = 1;
@@ -98,27 +103,42 @@ function sendPDUs(pduArray) {
     var client = dgram.createSocket('udp4'); // Open a UDP IPv4 Client
     //TODO: Send a transmitter pdu that says you're transmitting
     var txStartPdu = new dis.TransmitterPdu();
+    var txStartBuf = utils.DISPduToBuffer(txStartPdu);
+    client.send(txStartBuf, 0, txStartBuf.length, port, host, (err, bytes) => {
+        if (err) throw err;
+        console.log('UDP message sent to ' + host + ':' + port);
+    });
+
 
     pduArray.forEach((pdu, key) => {
         var pduBuf = utils.DISPduToBuffer(pdu);
-        client.send(pduBuf, 0, pduBuf.length, port, host, function(err, bytes) {
+        client.send(pduBuf, 0, pduBuf.length, port, host, (err, bytes) => {
             if (err) throw err;
-            console.log('UDP message sent to ' + host +':'+ port);
+            console.log('UDP message sent to ' + host + ':' + port);
         });
     });
+
+
     //TODO: Send a transmitter PDU
     var txEndPdu = new dis.TransmitterPdu();
+    var txEndBuf = utils.DISPduToBuffer(txEndPdu);
+    client.send(txEndBuf, 0, txEndBuf.length, port, host, (err, bytes) => {
+        if (err) throw err;
+        console.log('UDP message sent to ' + host + ':' + port);
+        client.close();
+    });
 }
-function createTestFile (name, time, depth, khz) {
+
+function createTestFile(name, time, depth, khz) {
     // Calc the max value of a sample based on depth
     var rng = 0;
-    for(var y=0;y<depth-1;y++){
+    for (var y = 0; y < depth - 1; y++) {
         rng += Math.pow(2, y);
     }
     // Create all the samples
     var samples = [];
-    for(var i=0;i<=khz*time-1;i++) {
-        var x = Math.trunc(Math.random()*rng);
+    for (var i = 0; i <= khz * time - 1; i++) {
+        var x = Math.trunc(Math.random() * rng);
         samples.push(x);
     }
     // Add samples to the file
@@ -126,4 +146,22 @@ function createTestFile (name, time, depth, khz) {
     wav.fromScratch(1, khz, depth, samples);
     // Write the wav file
     fs.writeFileSync(name, wav.toBuffer());
+}
+
+function toArrayBuffer(buf) {
+    var ab = new ArrayBuffer(buf.length);
+    var view = new Uint8Array(ab);
+    for (var i = 0; i < buf.length; i++) {
+        view[i] = buf[i];
+    }
+    return ab;
+}
+
+function toBuffer(ab) {
+    var buf = Buffer.alloc(ab.byteLength);
+    var view = new Uint8Array(ab);
+    for (var i = 0; i < buf.length; ++i) {
+        buf[i] = view[i];
+    }
+    return buf;
 }
