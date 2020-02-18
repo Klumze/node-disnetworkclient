@@ -4,8 +4,7 @@
   "description": "Example implementations for UDP client/server exchanging DIS (Distributed Interactive Simulation) packages",
   "main": "src/dis-udpserver.js",
   "scripts": {
-    "server": "node src/dis-udpserver.js",
-    "client": "node src/dis-udpclient.js"
+    "debug" : "node --inspect-brk=12000 ./src/dis-udpclient.js --host=239.10.229.10 --port=9000"
   },
   "repository": {
     "type": "git",
@@ -26,9 +25,8 @@
   "homepage": "https://github.com/keckxde/node-disnetworkclient#readme",
   "dependencies": {
     "open-dis": "file:../open-dis-javascript",
+    "wavefile": "^10.4.2",
+    "xmlhttprequest": "^1.8.0",
     "yargs": "^15.1.0"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com/"
   }
 }

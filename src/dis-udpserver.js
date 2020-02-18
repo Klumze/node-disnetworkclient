@@ -2,6 +2,7 @@ const dgram = require('dgram');
 const argv = require('yargs').argv;
 const dis = require("open-dis");
 const DISUtils = require('./DISUtils');
+const WaveFile = require('wavefile').WaveFile;
 
 var utils = new DISUtils();
 
@@ -37,18 +38,39 @@ server.on('message', (msg, rinfo) => {
 		   
 		    break;
 		case 20: // Data PDU:
-		    console.log("Got DataPDU:")
+
+			console.log("Got DataPDU:");
+			
 		    break;
 		case 25:
 			var entityID = disMessage.entityId;
 			var radioID = disMessage.radioId;
 			var frequency = disMessage.frequency;
-			console.log("Got TransmitterPDU:", entityID, "Radio ID", radioID, "Frequency", frequency);
+			var transmitState = disMessage.transmitState;
+
+			console.log("Got TransmitterPDU:", entityID, "Radio ID", radioID, "Frequency", frequency, "Transmit State", transmitState);
+
 			break;
 		case 26:
 			var entityID = disMessage.entityId;
 			var radioID = disMessage.radioId;
-			console.log("Got SignalPDU:", entityID, "Radio:", radioID);
+			var data = disMessage.data;
+			var samples = disMessage.samples;
+			var dataLength = disMessage.dataLength;
+			var sampleRate = disMessage.sampleRate;
+			var timeStamp = disMessage.timestamp;
+
+			// TODO: Take the data and create a sound file from it
+			/*
+
+			How do I string pdu's together to make and audio file?
+
+			var wav = new WaveFile();
+			for(var i=0; i < disMessage.samples; i++) {
+				disMessage.data[i]
+			}
+			*/
+			console.log("Got SignalPDU:", entityID, "Radio:", radioID, "Sample Rate:", sampleRate, "Num Samples:", samples, "Data length:", dataLength, "Time Stamp:", timeStamp, "Data:", data);
 			break;
 		case 27:
 			var entityID = disMessage.entityId;
