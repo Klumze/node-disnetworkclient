@@ -84,3 +84,5 @@ See example implementation in [dis-udpserver.js](./src/dis-udpserver.js) as a st
 To get things working with my changes you'll need to grab the latest version of the open-dis library (v1.3.1 at the current time) as well as Wavefile from NPM.
 
 You can create sample audio files by providing a name to --tFile. By dfault this will create a 1 second 8000khz 16bit PCM audio file but these values can be adjusted with --tTime --tKhz and --tDepth.
+
+To send the audio file provide the name as a command line argument (--sFile).
