@@ -133,6 +133,7 @@ function sendPDUs(pduArray) {
 }
 
 function createTestFile(name, time, depth, khz) {
+    // There seems to be issues playing back the wav files oveer 32 bit, perhaps I have to change the encoding from PCM?
     // Calc the max value of a sample based on depth
     var rng = 0;
     for (var y = 0; y < depth - 1; y++) {
@@ -149,6 +150,13 @@ function createTestFile(name, time, depth, khz) {
     wav.fromScratch(1, khz, depth, samples);
     // Write the wav file
     fs.writeFileSync(name, wav.toBuffer());
+}
+
+function checkTestFile(name) {
+    var buf = fs.readFileSync(name);
+    var wav = new WaveFile();
+    wav.fromBuffer(buf);
+    console.log("Read the file:", wav.bitDepth);
 }
 
 function toArrayBuffer(buf) {
