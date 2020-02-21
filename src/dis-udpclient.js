@@ -53,8 +53,27 @@ function prepSigPDUs(samples) {
     var cntr = 0;
     var pduData = [];
     var sPdu = new dis.SignalPdu();
+    // The DIS entity we want to use for all these pdu's
+    var entityId = new dis.EntityID();
+    entityId.application = 1;
+    entityId.site = 1;
+    entityId.entity = 932;
+    // Create the PDU to sat that we've started broadcasting a message.
+    var txEnd = new dis.TransmitterPdu();
+    var txStart = new dis.TransmitterPdu();
 
-    console.log(samples.slice(0, 1));
+    // TODO: Set all the params of the TxPDUs
+    txStart.entityId = entityId;
+    txStart.radioId = 1;
+    txStart.frequency = '1000025';
+    txStart.transmitState = true;
+
+    txEnd.entityId = entityId;
+    txEnd.radioId = 1;
+    txEnd.frequency = '1000025';
+    txEnd.transmitState = false;
+
+    pduData.push(txStart);
 
     samples.forEach((sample, key) => {
         // Something is wrong with how I'm setting up my data, need to figure this one out
@@ -76,9 +95,7 @@ function prepSigPDUs(samples) {
         cntr++;
         if (cntr >= 320 || key === samples.length - 1) {
             var timestamp = new Date().getTime();
-            sPdu.entityId.site = 1;
-            sPdu.entityId.application = 1;
-            sPdu.entityId.entity = 932;
+            sPdu.entityId = entityId;
             sPdu.exerciseID = 1;
             sPdu.timestamp = timestamp;
             sPdu.encodingScheme = 4;
@@ -95,6 +112,8 @@ function prepSigPDUs(samples) {
             cntr = 0;
         }
     });
+    // Add the tx end pdu to notify everyone that we've stopped 
+    pduData.push(txEnd);
     // Return the array of created PDU's to be sent later
     return pduData;
 }
@@ -102,30 +121,14 @@ function prepSigPDUs(samples) {
 function sendPDUs(pduArray) {
     var client = dgram.createSocket('udp4'); // Open a UDP IPv4 Client
     //TODO: Send a transmitter pdu that says you're transmitting
-    var txStartPdu = new dis.TransmitterPdu();
-    var txStartBuf = utils.DISPduToBuffer(txStartPdu);
-    client.send(txStartBuf, 0, txStartBuf.length, port, host, (err, bytes) => {
-        if (err) throw err;
-        console.log('UDP message sent to ' + host + ':' + port);
-    });
-
-
     pduArray.forEach((pdu, key) => {
         var pduBuf = utils.DISPduToBuffer(pdu);
         client.send(pduBuf, 0, pduBuf.length, port, host, (err, bytes) => {
             if (err) throw err;
             console.log('UDP message sent to ' + host + ':' + port);
+            if(key === pduArray.length - 1)
+                client.close();
         });
-    });
-
-
-    //TODO: Send a transmitter PDU
-    var txEndPdu = new dis.TransmitterPdu();
-    var txEndBuf = utils.DISPduToBuffer(txEndPdu);
-    client.send(txEndBuf, 0, txEndBuf.length, port, host, (err, bytes) => {
-        if (err) throw err;
-        console.log('UDP message sent to ' + host + ':' + port);
-        client.close();
     });
 }
 
